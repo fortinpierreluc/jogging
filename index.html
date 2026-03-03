@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertisseur de Course</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0077b6;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .calculator-section {
+            margin-bottom: 35px;
+        }
+
+        .section-title {
+            color: #0077b6;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #0077b6;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f9f9f9;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #0077b6;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.15);
+        }
+
+        input::placeholder {
+            color: #aaa;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e0e0e0, transparent);
+            margin: 30px 0;
+        }
+
+        .header-image {
+            width: 80px;
+            height: 80px;
+            margin: 25px auto 0;
+            display: block;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .section-title {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Convertisseur de Course</h1>
+        <p class="subtitle">Convertissez instantanément vos données de course</p>
+
+        <div class="calculator-section">
+            <h2 class="section-title">Calculateur Vitesse</h2>
+            
+            <div class="input-group">
+                <label for="kmh">Vitesse (Km/h)</label>
+                <input type="text" id="kmh" placeholder="Ex: 10">
+            </div>
+
+            <div class="input-group">
+                <label for="minPerKm">Allure (Min:sec/km)</label>
+                <input type="text" id="minPerKm" placeholder="Ex: 6:00">
+            </div>
+
+            <div class="input-group">
+                <label for="mph">Vitesse (Miles/h)</label>
+                <input type="text" id="mph" placeholder="Ex: 6.2">
+            </div>
+
+            <div class="input-group">
+                <label for="minPerMile">Allure (Min:sec/mile)</label>
+                <input type="text" id="minPerMile" placeholder="Ex: 9:40">
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="calculator-section">
+            <h2 class="section-title">Calculateur Distance</h2>
+            
+            <div class="input-group">
+                <label for="km">Distance (Kilomètres)</label>
+                <input type="text" id="km" placeholder="Ex: 5">
+            </div>
+
+            <div class="input-group">
+                <label for="miles">Distance (Miles)</label>
+                <input type="text" id="miles" placeholder="Ex: 3.1">
+            </div>
+        </div>
+
+        <img src="Public/Jogging.jpg" alt="Jogging" class="header-image">
+    </div>
+
+    <script>
+        // Constants
+        const KM_TO_MILES = 0.621371;
+        const MILES_TO_KM = 1.60934;
+
+        // Prevent infinite loops
+        let isUpdating = false;
+
+        // Speed Calculator Elements
+        const kmhInput = document.getElementById('kmh');
+        const minPerKmInput = document.getElementById('minPerKm');
+        const mphInput = document.getElementById('mph');
+        const minPerMileInput = document.getElementById('minPerMile');
+
+        // Distance Calculator Elements
+        const kmInput = document.getElementById('km');
+        const milesInput = document.getElementById('miles');
+
+        // Helper Functions
+        function normalizeNumber(str) {
+            // Replace comma with period for decimal numbers
+            return str.replace(',', '.');
+        }
+
+        function parseTimeToMinutes(timeStr) {
+            // Parse time formats: "6", "6:", "6:30", etc. to decimal minutes
+            if (!timeStr || timeStr.trim() === '') return null;
+            
+            timeStr = normalizeNumber(timeStr.trim());
+            const parts = timeStr.split(':');
+            
+            if (parts.length === 1) {
+                // Just minutes: "6" or "6,5" -> 6.0 or 6.5
+                const minutes = parseFloat(parts[0]);
+                if (isNaN(minutes)) return null;
+                return minutes;
+            } else if (parts.length === 2) {
+                // Minutes and seconds: "6:30" -> 6.5
+                const minutes = parseFloat(parts[0]);
+                const seconds = parts[1] === '' ? 0 : parseFloat(parts[1]);
+                if (isNaN(minutes) || isNaN(seconds)) return null;
+                return minutes + (seconds / 60);
+            }
+            
+            return null;
+        }
+
+        function minutesToTimeString(minutes) {
+            // Convert decimal minutes to "MM:SS" format
+            const mins = Math.floor(minutes);
+            const secs = Math.round((minutes - mins) * 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatNumber(num, decimals = 2) {
+            return num.toFixed(decimals);
+        }
+
+        // Speed Calculator Functions
+        function updateFromKmh() {
+            if (isUpdating) return;
+            const value = parseFloat(normalizeNumber(kmhInput.value));
+            if (isNaN(value) || value <= 0) {
+                clearSpeedFields(kmhInput);
+                return;
+            }
+
+            isUpdating = true;
+            
+            // Calculate pace in min/km
+            const paceKm = 60 / value;
+            minPerKmInput.value = minutesToTimeString(paceKm);
+
+            // Calculate mph
+            const mph = value * KM_TO_MILES;
+            mphInput.value = formatNumber(mph);
+
+            // Calculate pace in min/mile
+            const paceMile = 60 / mph;
+            minPerMileInput.value = minutesToTimeString(paceMile);
+
+            isUpdating = false;
+        }
+
+        function updateFromMinPerKm() {
+            if (isUpdating) return;
+            
+            const inputValue = minPerKmInput.value.trim();
+            if (inputValue === '') {
+                clearSpeedFields(minPerKmInput);
+                return;
+            }
+            
+            const paceMinutes = parseTimeToMinutes(inputValue);
+            if (paceMinutes === null || paceMinutes <= 0) {
+                return;
+            }
+
+            isUpdating = true;
+
+            // Calculate km/h
+            const kmh = 60 / paceMinutes;
+            kmhInput.value = formatNumber(kmh);
+
+            // Calculate mph
+            const mph = kmh * KM_TO_MILES;
+            mphInput.value = formatNumber(mph);
+
+            // Calculate pace in min/mile
+            const paceMile = 60 / mph;
+            minPerMileInput.value = minutesToTimeString(paceMile);
+
+            isUpdating = false;
+        }
+
+        function updateFromMph() {
+            if (isUpdating) return;
+            const value = parseFloat(normalizeNumber(mphInput.value));
+            if (isNaN(value) || value <= 0) {
+                clearSpeedFields(mphInput);
+                return;
+            }
+
+            isUpdating = true;
+
+            // Calculate pace in min/mile
+            const paceMile = 60 / value;
+            minPerMileInput.value = minutesToTimeString(paceMile);
+
+            // Calculate km/h
+            const kmh = value * MILES_TO_KM;
+            kmhInput.value = formatNumber(kmh);
+
+            // Calculate pace in min/km
+            const paceKm = 60 / kmh;
+            minPerKmInput.value = minutesToTimeString(paceKm);
+
+            isUpdating = false;
+        }
+
+        function updateFromMinPerMile() {
+            if (isUpdating) return;
+            
+            const inputValue = minPerMileInput.value.trim();
+            if (inputValue === '') {
+                clearSpeedFields(minPerMileInput);
+                return;
+            }
+            
+            const paceMinutes = parseTimeToMinutes(inputValue);
+            if (paceMinutes === null || paceMinutes <= 0) {
+                return;
+            }
+
+            isUpdating = true;
+
+            // Calculate mph
+            const mph = 60 / paceMinutes;
+            mphInput.value = formatNumber(mph);
+
+            // Calculate km/h
+            const kmh = mph * MILES_TO_KM;
+            kmhInput.value = formatNumber(kmh);
+
+            // Calculate pace in min/km
+            const paceKm = 60 / kmh;
+            minPerKmInput.value = minutesToTimeString(paceKm);
+
+            isUpdating = false;
+        }
+
+        function clearSpeedFields(except) {
+            if (except !== kmhInput) kmhInput.value = '';
+            if (except !== minPerKmInput) minPerKmInput.value = '';
+            if (except !== mphInput) mphInput.value = '';
+            if (except !== minPerMileInput) minPerMileInput.value = '';
+        }
+
+        // Distance Calculator Functions
+        function updateFromKm() {
+            if (isUpdating) return;
+            const value = parseFloat(normalizeNumber(kmInput.value));
+            if (isNaN(value) || value < 0) {
+                if (kmInput !== document.activeElement) kmInput.value = '';
+                milesInput.value = '';
+                return;
+            }
+
+            isUpdating = true;
+            const miles = value * KM_TO_MILES;
+            milesInput.value = formatNumber(miles);
+            isUpdating = false;
+        }
+
+        function updateFromMiles() {
+            if (isUpdating) return;
+            const value = parseFloat(normalizeNumber(milesInput.value));
+            if (isNaN(value) || value < 0) {
+                if (milesInput !== document.activeElement) milesInput.value = '';
+                kmInput.value = '';
+                return;
+            }
+
+            isUpdating = true;
+            const km = value * MILES_TO_KM;
+            kmInput.value = formatNumber(km);
+            isUpdating = false;
+        }
+
+        // Event Listeners - Speed Calculator
+        kmhInput.addEventListener('input', updateFromKmh);
+        minPerKmInput.addEventListener('input', updateFromMinPerKm);
+        mphInput.addEventListener('input', updateFromMph);
+        minPerMileInput.addEventListener('input', updateFromMinPerMile);
+
+        // Event Listeners - Distance Calculator
+        kmInput.addEventListener('input', updateFromKm);
+        milesInput.addEventListener('input', updateFromMiles);
+    </script>
+</body>
+</html>
